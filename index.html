@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>时间戳转换器 · 秒/毫秒 ⇄ 日期</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{--acc:#7ec8e8;--bg:#0e0e11;--card:#141418;--line:#232329;--text:#eee;--dim:#8a8a96}
+  body{min-height:100vh;background:var(--bg);color:var(--text);
+    font-family:"Inter","PingFang SC","Microsoft YaHei",system-ui,sans-serif;padding:40px 24px 60px}
+  .wrap{max-width:860px;margin:0 auto}
+  header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:26px}
+  .brand{display:flex;align-items:center;gap:12px;font-weight:600;letter-spacing:.16em;font-size:13px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--acc);box-shadow:0 0 14px 3px var(--acc)}
+  .sub{font-size:26px;font-weight:200;letter-spacing:-.01em}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px}
+  .card+.card{margin-top:14px}
+  .k{font-size:11px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase;margin-bottom:12px;font-weight:600}
+  .clock{font-size:clamp(56px,11vw,92px);font-weight:100;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+  .date{font-size:15px;color:var(--dim);margin-top:8px}
+  .tsrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px}
+  .ts{font:15px/1.6 "JetBrains Mono",Consolas,monospace;color:#d8d8de;background:#0b0b0e;border:1px solid var(--line);
+    border-radius:10px;padding:9px 14px;min-width:150px;cursor:pointer;user-select:all}
+  .ts b{color:#fff;font-weight:500;cursor:pointer}
+  .btn{border:1px solid #33333d;background:#1b1b21;color:#ddd;font:inherit;font-size:13px;padding:9px 16px;border-radius:10px;cursor:pointer;transition:.25s}
+  .btn:hover{border-color:#4a4a56;background:#22222a}
+  .btn.acc{background:var(--acc);border-color:var(--acc);color:#0e0e11;font-weight:600}
+  .btn.acc:hover{filter:brightness(1.08)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:760px){.grid{grid-template-columns:1fr}}
+  .inrow{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+  .inrow input{flex:1;min-width:180px;background:#0b0b0e;border:1px solid var(--line);border-radius:10px;color:#d8d8de;
+    font:13.5px/1.6 "JetBrains Mono",Consolas,monospace;padding:10px 12px;outline:none}
+  .inrow input:focus{border-color:var(--acc)}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .chip{border:1px solid #33333d;background:transparent;color:var(--dim);font:inherit;font-size:12.5px;padding:7px 14px;border-radius:99px;cursor:pointer;transition:.25s}
+  .chip:hover{color:#fff;border-color:#4a4a56}
+  .out{display:none;background:#0b0b0e;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:14px}
+  .out .r{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #1e1e26;font-size:14px}
+  .out .r:last-child{border-bottom:0}
+  .out .r span{color:var(--dim);white-space:nowrap}
+  .out .r b{font-weight:500;font-variant-numeric:tabular-nums;word-break:break-all}
+  .mini{font-size:11.5px;padding:6px 11px;border-radius:8px;background:#1b1b21;border:1px solid #33333d;color:var(--dim);cursor:pointer;transition:.25s;white-space:nowrap}
+  .mini:hover{color:#fff}
+  footer{margin-top:26px;font-size:12px;color:#4c4c56;letter-spacing:.1em;text-align:center}
+  .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(80px);background:#fff;color:#0e0e11;
+    font-size:13px;font-weight:600;padding:10px 20px;border-radius:99px;transition:.3s;opacity:0;z-index:9}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="dot"></span> 时间戳转换器</div>
+    <div class="sub">秒 / 毫秒 ⇄ 日期 · 实时时钟</div>
+  </header>
+
+  <!-- 当前时间 -->
+  <div class="card">
+    <div class="k">当前时间</div>
+    <div class="clock" id="clock">--:--:--</div>
+    <div class="date" id="date">—</div>
+    <div class="tsrow">
+      <span class="ts" id="ts-s" title="点击复制"></span>
+      <span class="ts" id="ts-ms" title="点击复制"></span>
+      <span class="ts" id="ts-iso" title="点击复制"></span>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- 时间戳 → 日期 -->
+    <div class="card">
+      <div class="k">时间戳 → 日期</div>
+      <div class="inrow"><input id="tsin" placeholder="如 1755000000（自动识别秒/毫秒）" spellcheck="false"><button class="btn acc" id="btn-t2d">转换</button></div>
+      <div class="out" id="out-t2d"></div>
+      <div class="chips" id="chips-t2d"></div>
+    </div>
+    <!-- 日期 → 时间戳 -->
+    <div class="card">
+      <div class="k">日期 → 时间戳</div>
+      <div class="inrow"><input type="datetime-local" id="dtin"><button class="btn acc" id="btn-d2t">转换</button></div>
+      <div class="out" id="out-d2t"></div>
+      <div class="chips" id="chips-d2t"></div>
+    </div>
+  </div>
+
+  <footer>单个 HTML 文件 · 无框架 · 无外部请求 · 双击即可打开</footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const toast=$('#toast');let tt;
+function tip(m){toast.textContent=m;toast.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>toast.classList.remove('show'),1600)}
+async function copy(t){try{await navigator.clipboard.writeText(t);tip('已复制')}catch(e){prompt('复制失败，请手动复制：',t)}}
+function $(s){return document.querySelector(s)}
+const pad=n=>String(n).padStart(2,'0');
+function fmt(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`}
+function rel(ms){ /* 距今 */
+  const diff=Date.now()-ms,abs=Math.abs(diff),s=Math.floor(abs/1000);
+  const txt=s<60?`${s} 秒`:(s<3600?`${Math.floor(s/60)} 分钟`:(s<86400?`${Math.floor(s/3600)} 小时`:`${Math.floor(s/86400)} 天`));
+  return diff>=0?`${txt}前`:`${txt}后`;
+}
+
+/* ---------- 实时时钟 ---------- */
+setInterval(()=>{
+  const n=Date.now(),d=new Date(n);
+  $('#clock').textContent=`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  $('#date').textContent=`${fmt(d)} · ${d.toLocaleDateString('zh-CN',{weekday:'long'})}`;
+  $('#ts-s').innerHTML=`<b>${Math.floor(n/1000)}</b>&nbsp;秒`;
+  $('#ts-ms').innerHTML=`<b>${n}</b>&nbsp;毫秒`;
+  $('#ts-iso').innerHTML=`<b>${n}</b>&nbsp;ISO`;
+},1000);
+['ts-s','ts-ms','ts-iso'].forEach(id=>$(id).addEventListener('click',e=>{
+  const b=e.target.closest('b');if(b)copy(b.textContent.trim());
+}));
+
+/* ---------- 时间戳 → 日期 ---------- */
+function r(t,v){return `<div class="r"><span>${t}</span><b>${v}</b></div>`}
+$('#btn-t2d').onclick=()=>{
+  const raw=$('#tsin').value.trim();if(!raw)return;
+  const n=Number(raw);if(isNaN(n)||n<=0){tip('请输入有效的数字时间戳');return}
+  const ms=n<1e11?n*1000:n; /* 10位=秒，13位=毫秒，其他按毫秒 */
+  const d=new Date(ms);
+  $('#out-t2d').style.display='block';
+  $('#out-t2d').innerHTML=
+    r('本地时间',fmt(d))+
+    r('UTC 时间',d.toISOString().replace('T',' ').slice(0,19)+' UTC')+
+    r('北京时间',fmt(new Date(ms+8*3600*1000))+' (UTC+8)')+
+    r('星期',['日','一','二','三','四','五','六'][d.getDay()]+' 曜日')+
+    r('距今',rel(ms))+
+    r('毫秒时间戳',`${ms}`)+
+    r('秒时间戳',`${Math.floor(ms/1000)}`);
+};
+$('#tsin').addEventListener('keydown',e=>{if(e.key==='Enter')$('#btn-t2d').onclick()});
+$('#tsin').addEventListener('input',()=>{if($('#tsin').value)$('#btn-t2d').onclick()});
+
+/* ---------- 日期 → 时间戳 ---------- */
+$('#btn-d2t').onclick=()=>{
+  const raw=$('#dtin').value;if(!raw)return;
+  const ms=new Date(raw.replace(/-/g,'/')).getTime();
+  if(isNaN(ms)){tip('无法解析该日期');return}
+  $('#out-d2t').style.display='block';
+  $('#out-d2t').innerHTML=r('秒级时间戳',Math.floor(ms/1000))+r('毫秒级时间戳',ms)+r('日期',fmt(new Date(ms)));
+};
+
+/* ---------- 快捷 chips ---------- */
+const chips=[
+  ['今天 00:00',()=>{const d=new Date();d.setHours(0,0,0,0);return Math.floor(d.getTime()/1000)}],
+  ['明天',()=>Math.floor(Date.now()/1000)+86400],
+  ['昨天',()=>Math.floor(Date.now()/1000)-86400],
+  ['一周后',()=>Math.floor(Date.now()/1000)+604800],
+  ['月末最后一天',()=>{const d=new Date();const e=new Date(d.getFullYear(),d.getMonth()+1,0);e.setHours(23,59,59,0);return Math.floor(e.getTime()/1000)}],
+  ['明年今日',()=>{const d=new Date();d.setFullYear(d.getFullYear()+1);return Math.floor(d.getTime()/1000)}],
+];
+$('#chips-t2d').innerHTML=chips.map(([n,f],i)=>
+  `<button class="chip" data-i="${i}">${n}</button>`).join('');
+$('#chips-t2d').addEventListener('click',e=>{
+  const b=e.target.closest('.chip');if(!b)return;
+  const v=chips[+b.dataset.i][1]();
+  $('#tsin').value=v;$('#btn-t2d').onclick();
+});
+const dchips=[['今天','14:00'],['明天','09:00'],['下周一','09:00']];
+$('#chips-d2t').innerHTML=dchips.map(([n])=>`<button class="chip">${n}</button>`).join('');
+$('#chips-d2t').addEventListener('click',e=>{
+  const b=e.target.closest('.chip');if(!b)return;
+  const i=Array.from($('#chips-d2t').children).indexOf(b);
+  const [name,hhmm]=dchips[i];
+  const d=new Date();
+  if(name==='明天')d.setDate(d.getDate()+1);
+  if(name==='下周一')d.setDate(d.getDate()+((7-d.getDay())%7||7)); /* 今天周一则跳到下周一 */
+  d.setHours(+hhmm.slice(0,2),+hhmm.slice(3),0,0);
+  const pad=n=>String(n).padStart(2,'0');
+  $('#dtin').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${hhmm}`;
+  $('#btn-d2t').onclick();
+});
+$('#dtin').addEventListener('input',()=>{if($('#dtin').value)$('#btn-d2t').onclick()});
+</script>
+</body>
+</html>
