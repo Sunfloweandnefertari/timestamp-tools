@@ -111,7 +111,7 @@ setInterval(()=>{
   $('#ts-ms').innerHTML=`<b>${n}</b>&nbsp;毫秒`;
   $('#ts-iso').innerHTML=`<b>${n}</b>&nbsp;ISO`;
 },1000);
-['ts-s','ts-ms','ts-iso'].forEach(id=>$(id).addEventListener('click',e=>{
+['ts-s','ts-ms','ts-iso'].forEach(id=>$('#'+id).addEventListener('click',e=>{
   const b=e.target.closest('b');if(b)copy(b.textContent.trim());
 }));
 
